@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>爱很奇怪 - 小游戏</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{overflow:hidden;background:#fff;text-align:center}
+        canvas{display:block;margin:0 auto}
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = 1080;
+canvas.height = 1920;
+
+const imgCat = new Image();
+imgCat.src = "cat.png";
+const imgPipeTop = new Image();
+imgPipeTop.src = "pipe-top.png";
+const imgPipeBottom = new Image();
+imgPipeBottom.src = "pipe-bottom.png";
+const imgBg = new Image();
+imgBg.src = "bg.jpg";
+
+let bird = {
+    x: 200,
+    y: canvas.height / 2,
+    size: 250,
+    velocity: 0,
+    gravity: 0.6,
+    jumpForce: -16
+};
+
+let pipes = [];
+const pipeWidth = 160;
+const pipeGap = 550;
+let pipeSpeed = 4;
+let score = 0;
+let gameOver = false;
+
+function jump(){
+    if(gameOver){
+        restartGame();
+    }else{
+        bird.velocity = bird.jumpForce;
+    }
+}
+canvas.addEventListener("click", jump);
+canvas.addEventListener("touchstart", (e)=>{
+    e.preventDefault();
+    jump();
+})
+
+function createPipe(){
+    const minTopHeight = 200;
+    const maxTopHeight = canvas.height - pipeGap - 200;
+    const topHeight = Math.random() * maxTopHeight + minTopHeight;
+    pipes.push({
+        x: canvas.width,
+        topHeight: topHeight,
+        scored: false
+    })
+}
+
+function restartGame(){
+    bird.y = canvas.height / 2;
+    bird.velocity = 0;
+    pipes = [];
+    score = 0;
+    gameOver = false;
+}
+
+// ============【彻底修复的碰撞函数】============
+function checkCollision(pipe){
+    // 小猫碰撞范围，大幅向内收缩
+    const birdShrink = 95;
+    const bx1 = bird.x + birdShrink;
+    const bx2 = bird.x + bird.size - birdShrink;
+    const by1 = bird.y + birdShrink;
+    const by2 = bird.y + bird.size - birdShrink;
+
+    const px1 = pipe.x;
+    const px2 = pipe.x + pipeWidth;
+
+    // 只有横向重叠的时候才有可能撞上
+    if (!(bx2 > px1 && bx1 < px2)){
+        return false;
+    }
+
+    // 👉！！！这里手动砍掉管道图片上方/下方多余透明空白，120像素
+    const pipeBlankOffset = 120;
+    // 上管道真实底部位置
+    const topPipeRealBottom = pipe.topHeight - pipeBlankOffset;
+    // 下管道真实顶部位置
+    const bottomPipeRealTop = pipe.topHeight + pipeGap + pipeBlankOffset;
+
+    // 和上管道相撞
+    if(by1 < topPipeRealBottom){
+        return true;
+    }
+    // 和下管道相撞
+    if(by2 > bottomPipeRealTop){
+        return true;
+    }
+
+    // 撞屏幕顶底
+    if(by1 <= 0 || by2 >= canvas.height){
+        return true;
+    }
+    return false;
+}
+
+
+function draw(){
+    ctx.drawImage(imgBg,0,0,canvas.width,canvas.height);
+
+    if(!gameOver){
+        bird.velocity += bird.gravity;
+        bird.y += bird.velocity;
+    }
+
+    ctx.drawImage(imgCat, bird.x, bird.y, bird.size, bird.size);
+
+    for(let i = pipes.length -1; i >=0; i--){
+        let p = pipes[i];
+        ctx.drawImage(imgPipeTop, p.x,0, pipeWidth, p.topHeight);
+        ctx.drawImage(imgPipeBottom, p.x, p.topHeight + pipeGap, pipeWidth, canvas.height - p.topHeight - pipeGap);
+        if(!gameOver){
+            p.x -= pipeSpeed;
+            if(checkCollision(p)){
+                gameOver = true;
+            }
+            if(!p.scored && p.x + pipeWidth < bird.x){
+                score++;
+                p.scored = true;
+            }
+        }
+        if(p.x + pipeWidth < 0){
+            pipes.splice(i,1);
+        }
+    }
+    if(!gameOver && (pipes.length ===0 || pipes[pipes.length-1].x < canvas.width - 380)){
+        createPipe();
+    }
+
+    ctx.fillStyle="#333";
+    ctx.font="60px sans-serif";
+    ctx.fillText(`分数：${score}`,60,100);
+    if(gameOver){
+        ctx.font="80px sans-serif";
+        ctx.fillText("游戏结束，点击重新开始", 80, canvas.height/2);
+    }
+    requestAnimationFrame(draw);
+}
+imgBg.onload = draw;
+</script>
+</body>
+</html>
