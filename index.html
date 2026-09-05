@@ -6,8 +6,16 @@
     <title>爱很奇怪 - 小游戏</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{overflow:hidden;background:#fff;text-align:center}
-        canvas{display:block;margin:0 auto}
+        body{overflow:hidden;background:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh}
+        #gameCanvas {
+            /* 画布最大宽度不能超出屏幕 */
+            max-width: 100vw;
+            /* 画布最大高度不能超出屏幕 */
+            max-height: 100vh;
+            /* 保持1080:1920竖屏比例 */
+            width: auto;
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -16,8 +24,11 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = 1080;
-canvas.height = 1920;
+// =====游戏逻辑分辨率固定不变=====
+const GAME_WIDTH = 1080;
+const GAME_HEIGHT = 1920;
+canvas.width = GAME_WIDTH;
+canvas.height = GAME_HEIGHT;
 
 const imgCat = new Image();
 imgCat.src = "cat.PNG";
@@ -76,9 +87,7 @@ function restartGame(){
     gameOver = false;
 }
 
-// ============【彻底修复的碰撞函数】============
 function checkCollision(pipe){
-    // 小猫碰撞范围，大幅向内收缩
     const birdShrink = 95;
     const bx1 = bird.x + birdShrink;
     const bx2 = bird.x + bird.size - birdShrink;
@@ -88,28 +97,20 @@ function checkCollision(pipe){
     const px1 = pipe.x;
     const px2 = pipe.x + pipeWidth;
 
-    // 只有横向重叠的时候才有可能撞上
     if (!(bx2 > px1 && bx1 < px2)){
         return false;
     }
 
-    // 👉！！！这里手动砍掉管道图片上方/下方多余透明空白，120像素
     const pipeBlankOffset = 120;
-    // 上管道真实底部位置
     const topPipeRealBottom = pipe.topHeight - pipeBlankOffset;
-    // 下管道真实顶部位置
     const bottomPipeRealTop = pipe.topHeight + pipeGap + pipeBlankOffset;
 
-    // 和上管道相撞
     if(by1 < topPipeRealBottom){
         return true;
     }
-    // 和下管道相撞
     if(by2 > bottomPipeRealTop){
         return true;
     }
-
-    // 撞屏幕顶底
     if(by1 <= 0 || by2 >= canvas.height){
         return true;
     }
